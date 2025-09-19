@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>スライドパズルゲーム</title>
+  <style>
+    body { background: #222; color: #fff; text-align: center; }
+    #puzzle { margin: 20px auto; display: grid; grid-template: repeat(4, 80px) / repeat(4, 80px); gap: 4px; }
+    .tile {
+      background: #3498db;
+      color: #fff;
+      font-size: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 8px;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .empty {
+      background: #222;
+      cursor: default;
+    }
+    #moves { font-size: 1.2em; margin: 10px; }
+    #reset { margin: 10px; padding: 8px 16px; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>スライドパズルゲーム</h1>
+  <div id="moves">手数: 0</div>
+  <button id="reset">リセット</button>
+  <div id="puzzle"></div>
+  <script>
+    const size = 4;
+    let tiles = [];
+    let moves = 0;
+    const puzzle = document.getElementById('puzzle');
+    const movesElem = document.getElementById('moves');
+    const resetBtn = document.getElementById('reset');
+
+    function initTiles() {
+      tiles = Array.from({length: size * size}, (_, i) => i + 1);
+      tiles[tiles.length - 1] = 0; // 最後は空
+      shuffle(tiles);
+      moves = 0;
+      update();
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      // 解ける配置にする（偶数パリティ）
+      if (!isSolvable(arr)) shuffle(arr);
+    }
+
+    function isSolvable(arr) {
+      let inv = 0;
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          if (arr[i] && arr[j] && arr[i] > arr[j]) inv++;
+        }
+      }
+      const emptyRow = Math.floor(arr.indexOf(0) / size);
+      return (inv + emptyRow) % 2 === 0;
+    }
+
+    function update() {
+      puzzle.innerHTML = '';
+      tiles.forEach((num, idx) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile' + (num === 0 ? ' empty' : '');
+        tile.textContent = num === 0 ? '' : num;
+        tile.onclick = () => moveTile(idx);
+        puzzle.appendChild(tile);
+      });
+      movesElem.textContent = '手数: ' + moves;
+    }
+
+    function moveTile(idx) {
+      const emptyIdx = tiles.indexOf(0);
+      const x = idx % size, y = Math.floor(idx / size);
+      const ex = emptyIdx % size, ey = Math.floor(emptyIdx / size);
+      if ((Math.abs(x - ex) === 1 && y === ey) || (Math.abs(y - ey) === 1 && x === ex)) {
+        [tiles[idx], tiles[emptyIdx]] = [tiles[emptyIdx], tiles[idx]];
+        moves++;
+        update();
+        if (isCompleted()) setTimeout(() => alert('クリア！手数: ' + moves), 100);
+      }
+    }
+
+    function isCompleted() {
+      for (let i = 0; i < tiles.length - 1; i++) {
+        if (tiles[i] !== i + 1) return false;
+      }
+      return tiles[tiles.length - 1] === 0;
+    }
+
+    resetBtn.onclick = initTiles;
+    initTiles();
+  </script>
+</body>
+</html>

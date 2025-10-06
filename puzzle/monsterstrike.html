@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>モンスターストライク風ゲーム</title>
+  <style>
+    body { background: #222; color: #fff; text-align: center; }
+    #gameCanvas { background: #333; display: block; margin: 30px auto; border-radius: 16px; box-shadow: 0 0 16px #000; }
+    #info { font-size: 1.2em; margin-top: 10px; }
+  #reset { margin: 10px; padding: 8px 16px; font-size: 1em; }
+  #stageSel { margin: 10px; padding: 8px 16px; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>モンスターストライク風ゲーム</h1>
+  <select id="stageSel"></select>
+  <button id="reset">リセット</button>
+  <div id="info"></div>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const info = document.getElementById('info');
+    const resetBtn = document.getElementById('reset');
+
+    // ステージ定義
+    const stages = [
+      {
+        name: 'ステージ1',
+        enemies: [
+          {x: 120, y: 200, r: 18, hp: 2},
+          {x: 360, y: 200, r: 18, hp: 2},
+          {x: 240, y: 350, r: 18, hp: 3}
+        ]
+      },
+      {
+        name: 'ステージ2',
+        enemies: [
+          {x: 80, y: 150, r: 18, hp: 2},
+          {x: 400, y: 150, r: 18, hp: 2},
+          {x: 80, y: 400, r: 18, hp: 2},
+          {x: 400, y: 400, r: 18, hp: 2},
+          {x: 240, y: 300, r: 24, hp: 4}
+        ]
+      },
+      {
+        name: 'ステージ3',
+        enemies: [
+          {x: 240, y: 120, r: 18, hp: 3},
+          {x: 120, y: 320, r: 18, hp: 2},
+          {x: 360, y: 320, r: 18, hp: 2},
+          {x: 240, y: 520, r: 18, hp: 3}
+        ]
+      }
+    ];
+
+    // モンスター
+    let monster = { x: 240, y: 500, r: 20, vx: 0, vy: 0, moving: false };
+    // 敵
+  let enemies = [];
+  let bullets = [];
+  let turn = 'player'; // 'player' or 'enemy'
+    // ゲーム状態
+    let dragging = false, dragStart = null, dragEnd = null, gameOver = false;
+    let currentStage = 0;
+    const stageSel = document.getElementById('stageSel');
+
+    // ステージ選択UI
+    stages.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = s.name;
+      stageSel.appendChild(opt);
+    });
+    stageSel.onchange = () => {
+      currentStage = parseInt(stageSel.value);
+      resetGame();
+    };
+
+    function resetGame() {
+      monster.x = 240; monster.y = 500; monster.vx = 0; monster.vy = 0; monster.moving = false;
+      enemies = stages[currentStage].enemies.map(e => ({...e}));
+      bullets = [];
+      dragging = false; dragStart = null; dragEnd = null; gameOver = false;
+      turn = 'player';
+      info.textContent = 'あなたのターン：モンスターをドラッグして弾こう！';
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // 敵
+      enemies.forEach(e => {
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+        // HPによる色変化
+        let color = '#e74c3c';
+        if (e.hp === 3) color = '#f39c12';
+        if (e.hp >= 4) color = '#3498db';
+        if (e.hp === 2) color = '#e67e22';
+        if (e.hp === 1) color = '#c0392b';
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+        // HP表示
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.hp, e.x, e.y);
+      });
+      // 弾
+      bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+        ctx.fillStyle = '#ff5252';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+      });
+      // モンスター
+      ctx.beginPath();
+      ctx.arc(monster.x, monster.y, monster.r, 0, Math.PI*2);
+      ctx.fillStyle = '#4caf50';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      // ドラッグ線
+      if (dragging && dragStart && turn === 'player') {
+        ctx.beginPath();
+        ctx.moveTo(monster.x, monster.y);
+        ctx.lineTo(dragStart.x, dragStart.y);
+        ctx.strokeStyle = '#ffeb3b';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+    }
+
+    // 弾発射タイマー
+    let bulletTimer = 0;
+    let enemyTurnFrame = 0;
+    function update() {
+      if (!gameOver) {
+        if (turn === 'enemy') {
+          enemyTurnFrame++;
+          if (enemyTurnFrame === 1) {
+            // 相手ターン開始時に弾発射
+            enemies.forEach(e => {
+              bullets.push({x: e.x, y: e.y+e.r+5, r: 7, vy: 3});
+            });
+            info.textContent = '相手のターン：敵が攻撃中...';
+          }
+          // 弾移動
+          bullets.forEach(b => {
+            b.y += b.vy;
+          });
+          // 弾とモンスターの当たり判定
+          bullets.forEach(b => {
+            const dx = monster.x-b.x, dy = monster.y-b.y;
+            if (Math.sqrt(dx*dx+dy*dy) <= monster.r+b.r && !gameOver) {
+              info.textContent = 'ゲームオーバー！リセットで再挑戦';
+              gameOver = true;
+              monster.moving = false;
+            }
+          });
+          // 画面外の弾を削除
+          bullets = bullets.filter(b => b.y < canvas.height+20);
+          // 相手ターン終了（弾が全て消えたら）
+          if (bullets.length === 0 && !gameOver) {
+            turn = 'player';
+            info.textContent = 'あなたのターン：モンスターをドラッグして弾こう！';
+            enemyTurnFrame = 0;
+          }
+        }
+        if (turn === 'player') {
+          if (monster.moving) {
+            monster.x += monster.vx;
+            monster.y += monster.vy;
+            // 摩擦（減速率）
+            const friction = 0.995; // より緩やかに
+            monster.vx *= friction;
+            monster.vy *= friction;
+            // 速度が小さくなったら停止
+            if (Math.abs(monster.vx) < 0.1 && Math.abs(monster.vy) < 0.1) {
+              monster.vx = 0; monster.vy = 0; monster.moving = false;
+              // プレイヤーターン終了
+              turn = 'enemy';
+              enemyTurnFrame = 0;
+            }
+            // 壁反射
+            if (monster.x-monster.r < 0 || monster.x+monster.r > canvas.width) {
+              monster.vx *= -1;
+              monster.x = Math.max(monster.r, Math.min(canvas.width-monster.r, monster.x));
+            }
+            if (monster.y-monster.r < 0 || monster.y+monster.r > canvas.height) {
+              monster.vy *= -1;
+              monster.y = Math.max(monster.r, Math.min(canvas.height-monster.r, monster.y));
+            }
+            // 敵判定（HP減少）
+            enemies.forEach(e => {
+              const dx = monster.x-e.x, dy = monster.y-e.y;
+              if (Math.sqrt(dx*dx+dy*dy) <= monster.r+e.r && e.hp > 0) {
+                e.hp--;
+                // モンスター反射（簡易）
+                const angle = Math.atan2(dy, dx);
+                monster.vx = Math.cos(angle) * Math.abs(monster.vx);
+                monster.vy = Math.sin(angle) * Math.abs(monster.vy);
+              }
+            });
+            enemies = enemies.filter(e => e.hp > 0);
+            if (enemies.length === 0 && !gameOver) {
+              info.textContent = 'クリア！リセットで再挑戦';
+              gameOver = true;
+              monster.moving = false;
+            }
+          }
+        }
+      }
+      draw();
+    }
+
+    // マウス操作
+    canvas.addEventListener('mousedown', e => {
+      if (monster.moving || gameOver || turn !== 'player') return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+      const dx = mx-monster.x, dy = my-monster.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= monster.r) {
+        dragging = true;
+        dragStart = {x: mx, y: my};
+      }
+    });
+    canvas.addEventListener('mousemove', e => {
+      if (!dragging || turn !== 'player') return;
+      const rect = canvas.getBoundingClientRect();
+      dragStart = {x: e.clientX-rect.left, y: e.clientY-rect.top};
+      draw();
+    });
+    canvas.addEventListener('mouseup', e => {
+      if (!dragging || turn !== 'player') return;
+      const rect = canvas.getBoundingClientRect();
+      dragEnd = {x: e.clientX-rect.left, y: e.clientY-rect.top};
+      // 速度計算
+      const dx = monster.x-dragEnd.x, dy = monster.y-dragEnd.y;
+      monster.vx = dx/10; monster.vy = dy/10;
+      monster.moving = true;
+      dragging = false;
+      dragStart = null; dragEnd = null;
+      info.textContent = 'あなたのターン：モンスター移動中...';
+    });
+
+    // タッチ操作
+    canvas.addEventListener('touchstart', e => {
+      if (monster.moving || gameOver || turn !== 'player') return;
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches[0];
+      const mx = t.clientX-rect.left, my = t.clientY-rect.top;
+      const dx = mx-monster.x, dy = my-monster.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= monster.r) {
+        dragging = true;
+        dragStart = {x: mx, y: my};
+      }
+    });
+    canvas.addEventListener('touchmove', e => {
+      if (!dragging || turn !== 'player') return;
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches[0];
+      dragStart = {x: t.clientX-rect.left, y: t.clientY-rect.top};
+      draw();
+    });
+    canvas.addEventListener('touchend', e => {
+      if (!dragging || turn !== 'player') return;
+      // 速度計算
+      const dx = monster.x-dragStart.x, dy = monster.y-dragStart.y;
+      monster.vx = dx/10; monster.vy = dy/10;
+      monster.moving = true;
+      dragging = false;
+      dragStart = null; dragEnd = null;
+      info.textContent = 'あなたのターン：モンスター移動中...';
+    });
+
+    function gameLoop() {
+      update();
+      requestAnimationFrame(gameLoop);
+    }
+
+    resetBtn.onclick = () => {
+      bulletTimer = 0;
+      resetGame();
+    };
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>

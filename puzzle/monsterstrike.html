@@ -16,6 +16,8 @@
   <select id="stageSel"></select>
   <button id="reset">リセット</button>
   <div id="info"></div>
+  <div id="playerHp" style="font-size:1.2em;margin:8px;"></div>
+  <button id="specialBtn" style="padding:8px 16px;font-size:1em;">必殺技</button>
   <canvas id="gameCanvas" width="480" height="640"></canvas>
   <script>
     const canvas = document.getElementById('gameCanvas');
@@ -55,10 +57,13 @@
     ];
 
     // モンスター
-    let monster = { x: 240, y: 500, r: 20, vx: 0, vy: 0, moving: false };
+  let monster = { x: 240, y: 500, r: 20, vx: 0, vy: 0, moving: false, hp: 5 };
     // 敵
   let enemies = [];
+  let specialReady = true;
   let bullets = [];
+  const playerHpDiv = document.getElementById('playerHp');
+  const specialBtn = document.getElementById('specialBtn');
   let turn = 'player'; // 'player' or 'enemy'
     // ゲーム状態
     let dragging = false, dragStart = null, dragEnd = null, gameOver = false;
@@ -78,16 +83,20 @@
     };
 
     function resetGame() {
-      monster.x = 240; monster.y = 500; monster.vx = 0; monster.vy = 0; monster.moving = false;
+      monster.x = 240; monster.y = 500; monster.vx = 0; monster.vy = 0; monster.moving = false; monster.hp = 5;
       enemies = stages[currentStage].enemies.map(e => ({...e}));
       bullets = [];
       dragging = false; dragStart = null; dragEnd = null; gameOver = false;
       turn = 'player';
+      specialReady = true;
       info.textContent = 'あなたのターン：モンスターをドラッグして弾こう！';
+      updatePlayerHp();
+      updateSpecialBtn();
       draw();
     }
 
     function draw() {
+      updatePlayerHp();
       ctx.clearRect(0,0,canvas.width,canvas.height);
       // 敵
       enemies.forEach(e => {
@@ -119,13 +128,19 @@
         ctx.strokeStyle = '#fff';
         ctx.stroke();
       });
-      // モンスター
-      ctx.beginPath();
-      ctx.arc(monster.x, monster.y, monster.r, 0, Math.PI*2);
-      ctx.fillStyle = '#4caf50';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.stroke();
+  // モンスター
+  ctx.beginPath();
+  ctx.arc(monster.x, monster.y, monster.r, 0, Math.PI*2);
+  ctx.fillStyle = monster.hp > 0 ? '#4caf50' : '#888';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+  // HP表示
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('HP:' + monster.hp, monster.x, monster.y - monster.r - 16);
       // ドラッグ線
       if (dragging && dragStart && turn === 'player') {
         ctx.beginPath();
@@ -141,6 +156,13 @@
     // 弾発射タイマー
     let bulletTimer = 0;
     let enemyTurnFrame = 0;
+    function updatePlayerHp() {
+      playerHpDiv.textContent = `自分のHP: ${monster.hp}`;
+    }
+    function updateSpecialBtn() {
+      specialBtn.disabled = !specialReady || turn !== 'player' || gameOver;
+      specialBtn.textContent = specialReady ? '必殺技' : '必殺技（使用不可）';
+    }
     function update() {
       if (!gameOver) {
         if (turn === 'enemy') {
@@ -160,9 +182,13 @@
           bullets.forEach(b => {
             const dx = monster.x-b.x, dy = monster.y-b.y;
             if (Math.sqrt(dx*dx+dy*dy) <= monster.r+b.r && !gameOver) {
-              info.textContent = 'ゲームオーバー！リセットで再挑戦';
-              gameOver = true;
-              monster.moving = false;
+              if (monster.hp > 0) monster.hp--;
+              updatePlayerHp();
+              if (monster.hp <= 0) {
+                info.textContent = 'ゲームオーバー！リセットで再挑戦';
+                gameOver = true;
+                monster.moving = false;
+              }
             }
           });
           // 画面外の弾を削除
@@ -179,7 +205,7 @@
             monster.x += monster.vx;
             monster.y += monster.vy;
             // 摩擦（減速率）
-            const friction = 0.995; // より緩やかに
+            const friction = 0.97; // より早く減速
             monster.vx *= friction;
             monster.vy *= friction;
             // 速度が小さくなったら停止
@@ -188,6 +214,8 @@
               // プレイヤーターン終了
               turn = 'enemy';
               enemyTurnFrame = 0;
+              specialReady = true;
+              updateSpecialBtn();
             }
             // 壁反射
             if (monster.x-monster.r < 0 || monster.x+monster.r > canvas.width) {
@@ -214,6 +242,25 @@
               info.textContent = 'クリア！リセットで再挑戦';
               gameOver = true;
               monster.moving = false;
+              updateSpecialBtn();
+    // 必殺技ボタン処理
+    specialBtn.onclick = () => {
+      if (!specialReady || turn !== 'player' || gameOver) return;
+      // 必殺技：全敵のHPを1減らす
+      enemies.forEach(e => { if (e.hp > 0) e.hp--; });
+      enemies = enemies.filter(e => e.hp > 0);
+      info.textContent = '必殺技発動！全敵にダメージ';
+      specialReady = false;
+      updateSpecialBtn();
+      draw();
+      // もし敵が全滅したらクリア
+      if (enemies.length === 0 && !gameOver) {
+        info.textContent = 'クリア！リセットで再挑戦';
+        gameOver = true;
+        monster.moving = false;
+        updateSpecialBtn();
+      }
+    };
             }
           }
         }

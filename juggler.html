@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>アイムジャグラー風スロット</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #222; color: #fff; }
+  .reels { display: flex; justify-content: center; margin: 30px 0; }
+  .reel-col { display: flex; flex-direction: column; align-items: center; }
+  .reel { font-size: 2.2em; width: 70px; height: 70px; background: #333; margin: 5px 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #888; }
+  .stop-btn { margin-top: 10px; font-size: 1em; padding: 5px 15px; border-radius: 6px; border: none; background: #2196f3; color: #fff; cursor: pointer; }
+  .stop-btn:active { background: #1565c0; }
+  #gogo { font-size: 2em; color: #ff0; margin: 20px 0; display: none; }
+  #start { font-size: 1.5em; padding: 10px 30px; border-radius: 8px; border: none; background: #e91e63; color: #fff; cursor: pointer; }
+  #start:active { background: #ad1457; }
+  </style>
+</head>
+<body>
+  <h1>アイムジャグラー風スロット</h1>
+  <div id="money" style="font-size:1.3em; margin-bottom:10px;">所持金: 1000円</div>
+  <div class="reels">
+    <div>
+      <div class="reel-col">
+        <div class="reel" id="reel1-0">7</div>
+        <div class="reel" id="reel1-1">7</div>
+        <div class="reel" id="reel1-2">7</div>
+      </div>
+      <button class="stop-btn" id="stop1" disabled>ストップ</button>
+    </div>
+    <div>
+      <div class="reel-col">
+        <div class="reel" id="reel2-0">7</div>
+        <div class="reel" id="reel2-1">7</div>
+        <div class="reel" id="reel2-2">7</div>
+      </div>
+      <button class="stop-btn" id="stop2" disabled>ストップ</button>
+    </div>
+    <div>
+      <div class="reel-col">
+        <div class="reel" id="reel3-0">7</div>
+        <div class="reel" id="reel3-1">7</div>
+        <div class="reel" id="reel3-2">7</div>
+      </div>
+      <button class="stop-btn" id="stop3" disabled>ストップ</button>
+    </div>
+  </div>
+  <div id="gogo">GOGO!</div>
+  <button id="start">スタート</button>
+
+  <script>
+    // 絵文字化
+    const symbols = ['7', 'BAR', '🍒', 'リプレイ', '🔔'];
+    // 3リール×3段
+    const reels = [
+      [document.getElementById('reel1-0'), document.getElementById('reel1-1'), document.getElementById('reel1-2')],
+      [document.getElementById('reel2-0'), document.getElementById('reel2-1'), document.getElementById('reel2-2')],
+      [document.getElementById('reel3-0'), document.getElementById('reel3-1'), document.getElementById('reel3-2')]
+    ];
+    const stops = [
+      document.getElementById('stop1'),
+      document.getElementById('stop2'),
+      document.getElementById('stop3')
+    ];
+    const gogo = document.getElementById('gogo');
+    let intervals = [null, null, null];
+    let stopped = [false, false, false];
+    let money = 1000;
+    const moneyDiv = document.getElementById('money');
+
+    // 各リールの表示内容（3段）
+    let reelSymbols = [
+      ['7', '7', '7'],
+      ['7', '7', '7'],
+      ['7', '7', '7']
+    ];
+
+    function updateMoney() {
+      moneyDiv.textContent = `所持金: ${money}円`;
+    }
+
+    function startReel(idx) {
+      intervals[idx] = setInterval(() => {
+        // 3つの絵柄をランダムに決定
+        for (let j = 0; j < 3; j++) {
+          const rand = Math.floor(Math.random() * symbols.length);
+          reelSymbols[idx][j] = symbols[rand];
+          reels[idx][j].textContent = reelSymbols[idx][j];
+        }
+      }, 80 + idx * 30);
+    }
+
+    function stopReel(idx) {
+      clearInterval(intervals[idx]);
+      stopped[idx] = true;
+      stops[idx].disabled = true;
+      // 全部止まったら判定
+      if (stopped.every(s => s)) {
+        // 中段のみで判定
+        let result = [reelSymbols[0][1], reelSymbols[1][1], reelSymbols[2][1]];
+        if (result[0] === '7' && result[1] === '7' && result[2] === '7') {
+          gogo.style.display = 'block';
+          money += 500;
+        } else {
+          gogo.style.display = 'none';
+        }
+        updateMoney();
+        document.getElementById('start').disabled = false;
+      }
+    }
+
+    document.getElementById('start').onclick = function() {
+      if (money < 100) {
+        alert('所持金が足りません！');
+        return;
+      }
+      money -= 100;
+      updateMoney();
+      gogo.style.display = 'none';
+      stopped = [false, false, false];
+      for (let i = 0; i < 3; i++) {
+        startReel(i);
+        stops[i].disabled = false;
+      }
+      this.disabled = true;
+    };
+
+    stops.forEach((btn, idx) => {
+      btn.onclick = function() {
+        stopReel(idx);
+      };
+    });
+
+    // 初期表示
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        reels[i][j].textContent = reelSymbols[i][j];
+      }
+    }
+    updateMoney();
+  </script>
+</body>
+</html>

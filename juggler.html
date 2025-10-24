@@ -4,52 +4,79 @@
   <meta charset="UTF-8">
   <title>アイムジャグラー風スロット</title>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #222; color: #fff; }
-  .reels { display: flex; justify-content: center; margin: 30px 0; }
-  .reel-col { display: flex; flex-direction: column; align-items: center; }
-  .reel { font-size: 2.2em; width: 70px; height: 70px; background: #333; margin: 5px 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #888; }
-  .stop-btn { margin-top: 10px; font-size: 1em; padding: 5px 15px; border-radius: 6px; border: none; background: #2196f3; color: #fff; cursor: pointer; }
-  .stop-btn:active { background: #1565c0; }
-  #gogo { font-size: 2em; color: #ff0; margin: 20px 0; display: none; }
-  #start { font-size: 1.5em; padding: 10px 30px; border-radius: 8px; border: none; background: #e91e63; color: #fff; cursor: pointer; }
-  #start:active { background: #ad1457; }
+    :root{--bg:#0b0b0f;--panel:#1e1b29;--accent:#ffde00;--muted:#666}
+    body { font-family: 'Yu Gothic', system-ui, sans-serif; text-align: center; background: radial-gradient(ellipse at top, #0b0b0f 0%, #070607 60%), #000; color: #fff; min-height:100vh; margin:0; padding:24px; }
+    h1{margin:0 0 8px 0; font-size:28px; letter-spacing:1px}
+    .machine{max-width:740px;margin:18px auto;padding:18px;background:linear-gradient(180deg,#0f0f13, #141218);border-radius:12px;border:2px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+    .info{display:flex;justify-content:space-between;align-items:center;padding:6px 12px}
+    #money{font-weight:700;color:var(--accent)}
+    .reels { display: flex; justify-content: center; gap:20px; margin: 18px 0; }
+    .reel-stack { display: flex; flex-direction: column; align-items: center; background:linear-gradient(180deg,#151217,#0f0d12);padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+    .reel { font-size:1.6rem; width:92px; height:92px; background:#0b0b0f; margin:4px 0; border-radius:8px; display:flex;align-items:center;justify-content:center;border:3px solid #221f2b;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,0.6) inset}
+    .reel.center{font-size:2rem;border-color:var(--accent);color:var(--accent);box-shadow:0 0 18px rgba(255,222,0,0.12), 0 4px 30px rgba(0,0,0,0.8) inset}
+    .stop-btn { margin-top: 10px; font-size: 0.95rem; padding: 8px 18px; border-radius: 20px; border: none; background:#333;color:#fff;cursor:pointer}
+    .stop-btn:disabled{opacity:0.35;cursor:default}
+    .controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:8px}
+    #gogo{font-size:2.2rem;color:var(--accent);text-shadow:0 0 8px rgba(255,222,0,0.6);display:none}
+    #start{font-size:1.05rem;padding:10px 26px;border-radius:24px;border:none;background:linear-gradient(180deg,#ff6b6b,#d9456b);color:#fff;cursor:pointer}
+    #start:disabled{opacity:0.5}
+    /* ランプ */
+    .lamp-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+    .lamp{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.06);box-shadow:0 2px 8px rgba(0,0,0,0.6) inset}
+    .lamp.on{background:var(--accent);box-shadow:0 0 10px rgba(255,222,0,0.9)}
+    /* 当たりアニメ */
+    .flash{animation:flash 700ms ease-in-out 3}
+    @keyframes flash{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.08);filter:brightness(1.7)}100%{transform:scale(1);filter:brightness(1)}}
+    /* レスポンシブ */
+    @media(max-width:640px){.reel{width:68px;height:68px}.reel.center{font-size:1.5rem}}
   </style>
 </head>
 <body>
-  <h1>アイムジャグラー風スロット</h1>
-  <div id="money" style="font-size:1.3em; margin-bottom:10px;">所持金: 1000円</div>
-  <div class="reels">
-    <div>
-      <div class="reel-col">
+  <div class="machine">
+    <h1>アイムジャグラー風</h1>
+    <div class="info">
+  <div id="money">所持金: 5000円</div>
+      <div id="gogo">GOGO!</div>
+    </div>
+
+    <div class="reels" role="region" aria-label="リール">
+      <div class="reel-stack">
         <div class="reel" id="reel1-0">7</div>
-        <div class="reel" id="reel1-1">7</div>
+        <div class="reel center" id="reel1-1">7</div>
         <div class="reel" id="reel1-2">7</div>
+        <button class="stop-btn" id="stop1" disabled>STOP</button>
       </div>
-      <button class="stop-btn" id="stop1" disabled>ストップ</button>
-    </div>
-    <div>
-      <div class="reel-col">
+      <div class="reel-stack">
         <div class="reel" id="reel2-0">7</div>
-        <div class="reel" id="reel2-1">7</div>
+        <div class="reel center" id="reel2-1">7</div>
         <div class="reel" id="reel2-2">7</div>
+        <button class="stop-btn" id="stop2" disabled>STOP</button>
       </div>
-      <button class="stop-btn" id="stop2" disabled>ストップ</button>
-    </div>
-    <div>
-      <div class="reel-col">
+      <div class="reel-stack">
         <div class="reel" id="reel3-0">7</div>
-        <div class="reel" id="reel3-1">7</div>
+        <div class="reel center" id="reel3-1">7</div>
         <div class="reel" id="reel3-2">7</div>
+        <button class="stop-btn" id="stop3" disabled>STOP</button>
       </div>
-      <button class="stop-btn" id="stop3" disabled>ストップ</button>
+    </div>
+
+    <div class="lamp-row" aria-hidden="true">
+      <div class="lamp" id="lamp1"></div>
+      <div class="lamp" id="lamp2"></div>
+      <div class="lamp" id="lamp3"></div>
+    </div>
+
+    <div class="controls">
+      <button id="start">スタート</button>
+      <button id="auto" title="全自動で順番に止めます">オート</button>
+  <button id="testMode" title="GOGO発生率を高めるテストモード">テスト: OFF</button>
     </div>
   </div>
-  <div id="gogo">GOGO!</div>
-  <button id="start">スタート</button>
 
   <script>
-    // 絵文字化
-    const symbols = ['7', 'BAR', '🍒', 'リプレイ', '🔔'];
+  // 絵柄リスト
+  const symbols = ['7', 'BAR', '🍒', '🍇', '🔔'];
+  const symbolsNo7 = symbols.filter(s => s !== '7');
     // 3リール×3段
     const reels = [
       [document.getElementById('reel1-0'), document.getElementById('reel1-1'), document.getElementById('reel1-2')],
@@ -61,11 +88,17 @@
       document.getElementById('stop2'),
       document.getElementById('stop3')
     ];
-    const gogo = document.getElementById('gogo');
+  const gogo = document.getElementById('gogo');
+  const lamps = [document.getElementById('lamp1'), document.getElementById('lamp2'), document.getElementById('lamp3')];
     let intervals = [null, null, null];
     let stopped = [false, false, false];
-    let money = 1000;
+  let gogoChance = false; // ゴーゴーチャンス中フラグ
+  let gogoRemain = 0; // GOGO継続の残りゲーム数
+  let money = 5000;
     const moneyDiv = document.getElementById('money');
+  const autoBtn = document.getElementById('auto');
+  const testModeBtn = document.getElementById('testMode');
+  let testModeEnabled = false;
 
     // 各リールの表示内容（3段）
     let reelSymbols = [
@@ -78,33 +111,137 @@
       moneyDiv.textContent = `所持金: ${money}円`;
     }
 
+    function updateGogoText(){
+      if(gogoRemain > 0){
+        gogo.textContent = `GOGO x${gogoRemain}`;
+        gogo.style.display = 'block';
+      } else if(gogoChance){
+        gogo.textContent = 'GOGO CHANCE!';
+        gogo.style.display = 'block';
+      } else {
+        gogo.style.display = 'none';
+      }
+    }
+
+    // 配当テーブル（ベース）
+    const basePayout = {
+      '7': 2000,
+      'BAR': 200,
+      '🍒': 100,
+      '🔔': 150,
+      '🍇': 500
+    };
+
+    // ライン定義（name, positions [reel,row], type）
+    const lines = [
+      {name:'横上', pos:[[0,0],[1,0],[2,0]], type:'horizontal'},
+      {name:'横中', pos:[[0,1],[1,1],[2,1]], type:'horizontal'},
+      {name:'横下', pos:[[0,2],[1,2],[2,2]], type:'horizontal'},
+      {name:'縦左', pos:[[0,0],[0,1],[0,2]], type:'vertical'},
+      {name:'縦中', pos:[[1,0],[1,1],[1,2]], type:'vertical'},
+      {name:'縦右', pos:[[2,0],[2,1],[2,2]], type:'vertical'},
+      {name:'斜めTLBR', pos:[[0,0],[1,1],[2,2]], type:'diagonal'},
+      {name:'斜めBLTR', pos:[[0,2],[1,1],[2,0]], type:'diagonal'}
+    ];
+
+    const typeMultiplier = { horizontal:1.0, vertical:1.2, diagonal:1.1 };
+
+    // ラインをチェックして配当を返す
+    function evaluateLines(){
+      const hits = [];
+      let total = 0;
+      for(const L of lines){
+        const syms = L.pos.map(p => reelSymbols[p[0]][p[1]]);
+        const allSame = syms.every(s => s === syms[0]);
+        if(allSame){
+          const sym = syms[0];
+          const base = basePayout[sym] || 0;
+          if(base > 0){
+            const payout = Math.round(base * (typeMultiplier[L.type] || 1));
+            total += payout;
+            hits.push({line: L.name, positions: L.pos, symbol: sym, payout});
+          }
+        }
+      }
+      return { total, hits };
+    }
+
+    // 強調表示: 該当するセルにフラッシュを付ける
+    function highlightPositions(positions){
+      positions.forEach(p => {
+        const el = reels[p[0]][p[1]];
+        if(el) el.classList.add('flash');
+      });
+      setTimeout(()=>{
+        positions.forEach(p => {
+          const el = reels[p[0]][p[1]];
+          if(el) el.classList.remove('flash');
+        });
+      }, 1600);
+    }
+
     function startReel(idx) {
       intervals[idx] = setInterval(() => {
         // 3つの絵柄をランダムに決定
         for (let j = 0; j < 3; j++) {
-          const rand = Math.floor(Math.random() * symbols.length);
-          reelSymbols[idx][j] = symbols[rand];
+          // 7の出現確率を制御（中央と非中央で別確率、GOGO中は上昇）
+          if (j === 1) {
+            const centerChance = gogoChance ? 0.22 : 0.05; // 中段の7出現確率（通常5% / GOGO中22%）
+            if (Math.random() < centerChance) {
+              reelSymbols[idx][j] = '7';
+            } else {
+              // 7以外を選ぶ
+              const rand = Math.floor(Math.random() * symbolsNo7.length);
+              reelSymbols[idx][j] = symbolsNo7[rand];
+            }
+          } else {
+            const sideChance = gogoChance ? 0.04 : 0.03; // 側段の7出現確率（通常3% / GOGO中4%）
+            if (Math.random() < sideChance) {
+              reelSymbols[idx][j] = '7';
+            } else {
+              const rand = Math.floor(Math.random() * symbolsNo7.length);
+              reelSymbols[idx][j] = symbolsNo7[rand];
+            }
+          }
           reels[idx][j].textContent = reelSymbols[idx][j];
         }
       }, 80 + idx * 30);
+    }
+
+    function highlightLamp(idx, on){
+      if(lamps[idx]) lamps[idx].classList.toggle('on', !!on);
     }
 
     function stopReel(idx) {
       clearInterval(intervals[idx]);
       stopped[idx] = true;
       stops[idx].disabled = true;
+      highlightLamp(idx, false);
       // 全部止まったら判定
       if (stopped.every(s => s)) {
-        // 中段のみで判定
-        let result = [reelSymbols[0][1], reelSymbols[1][1], reelSymbols[2][1]];
-        if (result[0] === '7' && result[1] === '7' && result[2] === '7') {
+        // ライン評価（横・縦・斜め）
+        const evalRes = evaluateLines();
+        if(evalRes.hits.length > 0){
+          // 各ヒットを強調して合計配当を加算
+          evalRes.hits.forEach(h => highlightPositions(h.positions));
+          money += evalRes.total;
+          // 配当が出た場合 GOGO 表示を一時的に表示
+          gogo.textContent = `WIN +${evalRes.total}`;
           gogo.style.display = 'block';
-          money += 500;
         } else {
-          gogo.style.display = 'none';
+          if (!gogoChance && gogoRemain === 0) gogo.style.display = 'none';
         }
         updateMoney();
         document.getElementById('start').disabled = false;
+        // スピンが終わったら継続カウントを消費（継続中のみ）
+        if(gogoRemain > 0){
+          gogoRemain = Math.max(0, gogoRemain - 1);
+        }
+        // 1回のみのゴーゴーチャンスは発動後にリセット
+        if(gogoChance) gogoChance = false;
+        // ランプは継続が無ければ消す
+        if(gogoRemain === 0) lamps.forEach(l=>l.classList.remove('on'));
+        updateGogoText();
       }
     }
 
@@ -113,13 +250,25 @@
         alert('所持金が足りません！');
         return;
       }
+  // スピン開始時にゴーゴーチャンス発生確率を常時1%に固定
+  gogoChance = Math.random() < 0.01;
+      if (gogoChance) {
+        // 継続ゲーム数をランダムで付与（例: 1〜3ゲーム）
+        gogoRemain = Math.floor(Math.random() * 3) + 1;
+        lamps.forEach(l=>l.classList.add('on'));
+      } else {
+        // 継続なし
+        gogoRemain = 0;
+      }
+      updateGogoText();
+
       money -= 100;
       updateMoney();
-      gogo.style.display = 'none';
       stopped = [false, false, false];
       for (let i = 0; i < 3; i++) {
         startReel(i);
         stops[i].disabled = false;
+        highlightLamp(i, true);
       }
       this.disabled = true;
     };
@@ -129,6 +278,23 @@
         stopReel(idx);
       };
     });
+
+    // オートボタン: 順に自動停止
+    autoBtn.onclick = function(){
+      if(document.getElementById('start').disabled) return; // 既に回っている
+      document.getElementById('start').click();
+      // リールを順に止める（短めの間隔）
+      setTimeout(()=>stops[0].click(), 600);
+      setTimeout(()=>stops[1].click(), 1150);
+      setTimeout(()=>stops[2].click(), 1750);
+    }
+
+    // テストモード切替
+    testModeBtn.onclick = function(){
+      testModeEnabled = !testModeEnabled;
+      testModeBtn.textContent = testModeEnabled ? 'テスト: ON' : 'テスト: OFF';
+      testModeBtn.style.background = testModeEnabled ? '#2e7d32' : '';
+    }
 
     // 初期表示
     for (let i = 0; i < 3; i++) {

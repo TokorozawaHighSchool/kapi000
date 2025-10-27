@@ -27,6 +27,17 @@
     /* 当たりアニメ */
     .flash{animation:flash 700ms ease-in-out 3}
     @keyframes flash{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.08);filter:brightness(1.7)}100%{transform:scale(1);filter:brightness(1)}}
+    /* GOGO 表示用アニメ */
+    #gogo.effect {
+      animation: gogoPulse 900ms ease-in-out 3, gogoGlow 1200ms linear infinite;
+      transform-origin: center;
+      text-shadow: 0 0 18px rgba(255,222,0,0.95), 0 0 36px rgba(255,120,0,0.6);
+      color: #fff;
+    }
+    @keyframes gogoPulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:0.95}100%{transform:scale(1);opacity:1}}
+    @keyframes gogoGlow{0%{filter:drop-shadow(0 0 8px rgba(255,200,0,0.6))}50%{filter:drop-shadow(0 0 20px rgba(255,100,0,0.9))}100%{filter:drop-shadow(0 0 8px rgba(255,200,0,0.6))}}
+    /* マシン発光 */
+    .machine.glow{box-shadow:0 8px 60px rgba(255,180,0,0.15), 0 0 60px rgba(255,120,0,0.08) inset}
     /* レスポンシブ */
     @media(max-width:640px){.reel{width:68px;height:68px}.reel.center{font-size:1.5rem}}
   </style>
@@ -94,6 +105,7 @@
     let stopped = [false, false, false];
   let gogoChance = false; // ゴーゴーチャンス中フラグ
   let gogoRemain = 0; // GOGO継続の残りゲーム数
+  let gogoPersist = false; // GOGO発動後、BARまたは7が揃うまで継続するモード
   let money = 5000;
     const moneyDiv = document.getElementById('money');
   const autoBtn = document.getElementById('auto');
@@ -112,10 +124,10 @@
     }
 
     function updateGogoText(){
-      if(gogoRemain > 0){
+  if(gogoRemain > 0){
         gogo.textContent = `GOGO x${gogoRemain}`;
         gogo.style.display = 'block';
-      } else if(gogoChance){
+  } else if(gogoChance || gogoPersist){
         gogo.textContent = 'GOGO CHANCE!';
         gogo.style.display = 'block';
       } else {
@@ -208,6 +220,39 @@
       }, 80 + idx * 30);
     }
 
+    // GOGO 演出を開始
+    function gogoStartEffect(){
+      const machine = document.querySelector('.machine');
+      machine.classList.add('glow');
+      gogo.classList.add('effect');
+      // ランプを派手に点滅させる
+      let flashCount = 0;
+      lamps.forEach((l, i) => {
+        l._flashInterval = setInterval(()=>{
+          l.classList.toggle('on');
+          flashCount++;
+          if(flashCount > 12){ // 12回ほど点滅
+            clearInterval(l._flashInterval);
+            l.classList.add('on');
+          }
+        }, 120 + i*30);
+      });
+      // 小さな追加効果: 全リールを一瞬ズーム
+      reels.flat().forEach(el => el.classList.add('flash'));
+      setTimeout(()=> reels.flat().forEach(el => el.classList.remove('flash')), 1000);
+    }
+
+    // GOGO 演出を終了
+    function gogoEndEffect(){
+      const machine = document.querySelector('.machine');
+      machine.classList.remove('glow');
+      gogo.classList.remove('effect');
+      lamps.forEach(l=>{
+        if(l._flashInterval) { clearInterval(l._flashInterval); l._flashInterval = null; }
+        l.classList.remove('on');
+      });
+    }
+
     function highlightLamp(idx, on){
       if(lamps[idx]) lamps[idx].classList.toggle('on', !!on);
     }
@@ -229,18 +274,34 @@
           gogo.textContent = `WIN +${evalRes.total}`;
           gogo.style.display = 'block';
         } else {
-          if (!gogoChance && gogoRemain === 0) gogo.style.display = 'none';
+          if (!gogoChance && !gogoPersist && gogoRemain === 0) gogo.style.display = 'none';
         }
         updateMoney();
         document.getElementById('start').disabled = false;
-        // スピンが終わったら継続カウントを消費（継続中のみ）
-        if(gogoRemain > 0){
-          gogoRemain = Math.max(0, gogoRemain - 1);
+        // GOGO 発動後の継続モードが有効なら、BARまたは7が揃ったかで終了判定
+        if(gogoPersist){
+          const endOnHit = evalRes.hits.some(h => h.symbol === '7' || h.symbol === 'BAR');
+          if(endOnHit){
+            // 終了: 表示とフラグをリセット
+            gogoPersist = false;
+            gogoChance = false;
+            lamps.forEach(l=>l.classList.remove('on'));
+            gogoEndEffect();
+          } else {
+            // 継続中は GOGO 効果を維持（7 の出現確率が上がる）
+            gogoChance = true;
+          }
+        } else {
+          // 既存の継続カウント処理（互換）
+          if(gogoRemain > 0){
+            gogoRemain = Math.max(0, gogoRemain - 1);
+          }
+          // 1回のみのゴーゴーチャンスは発動後にリセット
+          if(gogoChance) gogoChance = false;
+          // ランプは継続が無ければ消す
+          if(gogoRemain === 0) lamps.forEach(l=>l.classList.remove('on'));
+          if(gogoRemain === 0) gogoEndEffect();
         }
-        // 1回のみのゴーゴーチャンスは発動後にリセット
-        if(gogoChance) gogoChance = false;
-        // ランプは継続が無ければ消す
-        if(gogoRemain === 0) lamps.forEach(l=>l.classList.remove('on'));
         updateGogoText();
       }
     }
@@ -250,16 +311,28 @@
         alert('所持金が足りません！');
         return;
       }
-  // スピン開始時にゴーゴーチャンス発生確率を常時1%に固定
-  gogoChance = Math.random() < 0.01;
-      if (gogoChance) {
-        // 継続ゲーム数をランダムで付与（例: 1〜3ゲーム）
-        gogoRemain = Math.floor(Math.random() * 3) + 1;
-        lamps.forEach(l=>l.classList.add('on'));
-      } else {
-        // 継続なし
-        gogoRemain = 0;
-      }
+  // 既に persist モード中ならそのまま GOGO を継続（次スピンでも有効）
+  if (gogoPersist) {
+    gogoChance = true;
+    // lamps は既に点灯しているはずだが念のためオンにする
+    lamps.forEach(l=>l.classList.add('on'));
+  gogoStartEffect();
+  } else {
+    // スピン開始時にゴーゴーチャンス発生確率を設定（テストモード時は高確率）
+    const baseGogoProb = testModeEnabled ? 0.5 : 0.01; // テスト:50% / 通常:1%
+    gogoChance = Math.random() < baseGogoProb;
+    if (gogoChance) {
+      // 発動時はBARまたは7が揃うまで継続するモードにする
+      gogoPersist = true;
+      gogoRemain = 0;
+      lamps.forEach(l=>l.classList.add('on'));
+      gogoStartEffect();
+    } else {
+      // 継続なし
+      gogoPersist = false;
+      gogoRemain = 0;
+    }
+  }
       updateGogoText();
 
       money -= 100;

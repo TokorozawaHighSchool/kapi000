@@ -38,6 +38,19 @@
     @keyframes gogoGlow{0%{filter:drop-shadow(0 0 8px rgba(255,200,0,0.6))}50%{filter:drop-shadow(0 0 20px rgba(255,100,0,0.9))}100%{filter:drop-shadow(0 0 8px rgba(255,200,0,0.6))}}
     /* マシン発光 */
     .machine.glow{box-shadow:0 8px 60px rgba(255,180,0,0.15), 0 0 60px rgba(255,120,0,0.08) inset}
+    /* 回転演出: スピン中は軽く回転/揺れるアニメ、停止時に収束するアニメ */
+    .reel.spin{animation: reelTilt 360ms ease-in-out infinite; transform-origin: 50% 50%;}
+    .reel.settle{animation: reelSettle 550ms cubic-bezier(.2,.9,.3,1) 1; transform-origin: 50% 50%;}
+    @keyframes reelTilt{
+      0%{transform:rotate(-6deg) scale(1)}
+      50%{transform:rotate(6deg) scale(1.02)}
+      100%{transform:rotate(-6deg) scale(1)}
+    }
+    @keyframes reelSettle{
+      0%{transform:rotate(18deg) scale(1.06)}
+      60%{transform:rotate(-8deg) scale(1.01)}
+      100%{transform:rotate(0deg) scale(1)}
+    }
     /* レスポンシブ */
     @media(max-width:640px){.reel{width:68px;height:68px}.reel.center{font-size:1.5rem}}
   </style>
@@ -193,7 +206,9 @@
     }
 
     function startReel(idx) {
-      intervals[idx] = setInterval(() => {
+  // add spin class to show rotation effect while this reel is spinning
+  reels[idx].forEach(el => el.classList.add('spin'));
+  intervals[idx] = setInterval(() => {
         // 3つの絵柄をランダムに決定
         for (let j = 0; j < 3; j++) {
           // 7の出現確率を制御（中央と非中央で別確率、GOGO中は上昇）
@@ -262,6 +277,15 @@
       stopped[idx] = true;
       stops[idx].disabled = true;
       highlightLamp(idx, false);
+      // リールの回転クラスを外し、収束アニメーションを付与して自然に停止する演出
+      reels[idx].forEach(el => {
+        el.classList.remove('spin');
+        // トグル settle で一度だけ回転を収束
+        el.classList.add('settle');
+      });
+      setTimeout(()=>{
+        reels[idx].forEach(el => el.classList.remove('settle'));
+      }, 650);
       // 全部止まったら判定
       if (stopped.every(s => s)) {
         // ライン評価（横・縦・斜め）

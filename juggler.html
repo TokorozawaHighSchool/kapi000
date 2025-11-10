@@ -290,9 +290,14 @@
       if (stopped.every(s => s)) {
         // ライン評価（横・縦・斜め）
         const evalRes = evaluateLines();
-        if(evalRes.hits.length > 0){
+            if(evalRes.hits.length > 0){
           // 各ヒットを強調して合計配当を加算
           evalRes.hits.forEach(h => highlightPositions(h.positions));
+              // 7が揃ったヒットがあれば専用演出を実行
+              const sevenHits = evalRes.hits.filter(h => h.symbol === '7');
+              if(sevenHits.length > 0){
+                playSevenEffect(sevenHits);
+              }
           money += evalRes.total;
           // 配当が出た場合 GOGO 表示を一時的に表示
           gogo.textContent = `WIN +${evalRes.total}`;
@@ -328,6 +333,59 @@
         }
         updateGogoText();
       }
+    }
+
+    // 7揃い専用演出
+    function playSevenEffect(hits){
+      const machine = document.querySelector('.machine');
+      // 強めの発光 + GOGO 表示拡張
+      machine.classList.add('glow');
+      gogo.textContent = '777! BIG!!';
+      gogo.style.display = 'block';
+      gogo.classList.add('effect');
+      // 対象セルを順に波状にハイライト
+      let delay = 0;
+      hits.forEach(hit => {
+        hit.positions.forEach((p,i) => {
+          setTimeout(()=>{
+            const el = reels[p[0]][p[1]];
+            if(!el) return;
+            el.classList.add('flash');
+            el.style.transition = 'transform 260ms ease';
+            el.style.transform = 'scale(1.18)';
+            setTimeout(()=>{
+              el.style.transform = '';
+            }, 260);
+          }, delay + i*120);
+        });
+        delay += 420;
+      });
+      // 短い効果音（ブラウザのAudio APIを使用）
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, ctx.currentTime);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        // 上がるトーンとフェードアウト
+        o.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
+        setTimeout(()=>{ try{o.stop(); ctx.close();}catch(e){} }, 1000);
+      } catch(e) {
+        // AudioContext が拒否されたり作れない場合は無音で続行
+      }
+      // 効果を1.6s後に解除
+      setTimeout(()=>{
+        gogo.classList.remove('effect');
+        machine.classList.remove('glow');
+        // remove residual flash classes
+        reels.flat().forEach(el=>el.classList.remove('flash'));
+        updateGogoText();
+      }, 1600);
     }
 
     document.getElementById('start').onclick = function() {

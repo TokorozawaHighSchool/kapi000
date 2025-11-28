@@ -93,7 +93,6 @@
     <div class="controls">
       <button id="start">スタート</button>
       <button id="auto" title="全自動で順番に止めます">オート</button>
-  <button id="testMode" title="GOGO発生率を高めるテストモード">テスト: OFF</button>
     </div>
   </div>
 
@@ -122,8 +121,6 @@
   let money = 5000;
     const moneyDiv = document.getElementById('money');
   const autoBtn = document.getElementById('auto');
-  const testModeBtn = document.getElementById('testMode');
-  let testModeEnabled = false;
 
     // 各リールの表示内容（3段）
     let reelSymbols = [
@@ -388,7 +385,7 @@
       }, 1600);
     }
 
-    document.getElementById('start').onclick = function() {
+  document.getElementById('start').onclick = function() {
       if (money < 100) {
         alert('所持金が足りません！');
         return;
@@ -400,9 +397,9 @@
     lamps.forEach(l=>l.classList.add('on'));
   gogoStartEffect();
   } else {
-    // スピン開始時にゴーゴーチャンス発生確率を設定（テストモード時は高確率）
-    const baseGogoProb = testModeEnabled ? 0.5 : 0.01; // テスト:50% / 通常:1%
-    gogoChance = Math.random() < baseGogoProb;
+  // スピン開始時にゴーゴーチャンス発生確率を設定（通常:1%）
+  const baseGogoProb = 0.01; // 通常:1%
+  gogoChance = Math.random() < baseGogoProb;
     if (gogoChance) {
       // 発動時はBARまたは7が揃うまで継続するモードにする
       gogoPersist = true;
@@ -444,12 +441,7 @@
       setTimeout(()=>stops[2].click(), 1750);
     }
 
-    // テストモード切替
-    testModeBtn.onclick = function(){
-      testModeEnabled = !testModeEnabled;
-      testModeBtn.textContent = testModeEnabled ? 'テスト: ON' : 'テスト: OFF';
-      testModeBtn.style.background = testModeEnabled ? '#2e7d32' : '';
-    }
+  // テストモードは削除されました
 
     // 初期表示
     for (let i = 0; i < 3; i++) {
